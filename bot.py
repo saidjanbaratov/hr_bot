@@ -36,8 +36,8 @@ phone_menu = ReplyKeyboardMarkup(
 @dp.message(Command("start"))
 async def start_handler(message: Message):
     await message.answer(
-        f"HR_GROUP_ID: {HR_GROUP_ID}\n"
-        f"Siz yozgan chat ID: {message.chat.id}",
+        "Assalomu alaykum 👋\n"
+        "HR bo‘limi botiga xush kelibsiz.",
         reply_markup=menu
     )
 
@@ -116,7 +116,10 @@ async def main_handler(message: Message):
                     f"📌 Tajriba: {application['experience']}"
                 )
 
-                await bot.send_message(chat_id=HR_GROUP_ID, text=hr_text)
+                await bot.send_message(
+                    chat_id=HR_GROUP_ID,
+                    text=hr_text
+                )
 
                 if message.document:
                     await bot.send_document(
@@ -147,7 +150,9 @@ async def main_handler(message: Message):
                 return
 
             except Exception as error:
-                await message.answer(f"❌ Xatolik bo‘ldi:\n{error}")
+                await message.answer(
+                    f"❌ Xatolik bo‘ldi:\n{error}"
+                )
                 return
 
     await message.answer(
