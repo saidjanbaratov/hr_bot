@@ -36,8 +36,8 @@ phone_menu = ReplyKeyboardMarkup(
 @dp.message(Command("start"))
 async def start_handler(message: Message):
     await message.answer(
-        "Assalomu alaykum 👋\n"
-        "HR bo‘limi botiga xush kelibsiz.",
+        f"HR_GROUP_ID: {HR_GROUP_ID}\n"
+        f"Siz yozgan chat ID: {message.chat.id}",
         reply_markup=menu
     )
 
