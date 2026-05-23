@@ -9,7 +9,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-HR_GROUP_ID = os.getenv("HR_GROUP_ID")
+HR_ADMINS = os.getenv("HR_ADMINS", "")
+
+admin_ids = []
+for admin_id in HR_ADMINS.split(","):
+    admin_id = admin_id.strip()
+    if admin_id:
+        admin_ids.append(int(admin_id))
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -31,6 +37,34 @@ phone_menu = ReplyKeyboardMarkup(
     resize_keyboard=True,
     one_time_keyboard=True
 )
+
+
+async def send_to_admins(message: Message, hr_text: str):
+    for admin_id in admin_ids:
+        await bot.send_message(
+            chat_id=admin_id,
+            text=hr_text
+        )
+
+        if message.document:
+            await bot.send_document(
+                chat_id=admin_id,
+                document=message.document.file_id,
+                caption="📎 Resume/CV fayli"
+            )
+
+        elif message.photo:
+            await bot.send_photo(
+                chat_id=admin_id,
+                photo=message.photo[-1].file_id,
+                caption="📎 Resume/CV rasmi"
+            )
+
+        else:
+            await bot.send_message(
+                chat_id=admin_id,
+                text=f"📎 Resume/CV: {message.text}"
+            )
 
 
 @dp.message(Command("start"))
@@ -122,33 +156,17 @@ async def handler(message: Message):
                 f"📌 Tajriba: {data['experience']}"
             )
 
-            await bot.send_message(
-                chat_id=HR_GROUP_ID,
-                text=hr_text
-            )
-
-            if message.document:
-                await bot.send_document(
-                    chat_id=HR_GROUP_ID,
-                    document=message.document.file_id,
-                    caption="📎 Resume/CV fayli"
+            if not admin_ids:
+                await message.answer(
+                    "❌ HR admin ID kiritilmagan. Render’da HR_ADMINS qo‘shing.",
+                    reply_markup=menu
                 )
+                return
 
-            elif message.photo:
-                await bot.send_photo(
-                    chat_id=HR_GROUP_ID,
-                    photo=message.photo[-1].file_id,
-                    caption="📎 Resume/CV rasmi"
-                )
-
-            else:
-                await bot.send_message(
-                    chat_id=HR_GROUP_ID,
-                    text=f"📎 Resume/CV: {text}"
-                )
+            await send_to_admins(message, hr_text)
 
             await message.answer(
-                "✅ Arizangiz HR guruhga yuborildi!",
+                "✅ Arizangiz HR adminlarga yuborildi!",
                 reply_markup=menu
             )
 
