@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+HR_GROUP_ID = os.getenv("HR_GROUP_ID")
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -23,11 +24,20 @@ menu = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+phone_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📱 Telefon yuborish", request_contact=True)]
+    ],
+    resize_keyboard=True,
+    one_time_keyboard=True
+)
+
 
 @dp.message(Command("start"))
 async def start(message: Message):
     await message.answer(
-        "Assalomu alaykum 👋\nHR bo‘limi botiga xush kelibsiz.",
+        "Assalomu alaykum 👋\n"
+        "HR bo‘limi botiga xush kelibsiz.",
         reply_markup=menu
     )
 
@@ -38,7 +48,10 @@ async def handler(message: Message):
     text = message.text
 
     if text == "📞 Aloqa":
-        await message.answer("📞 HR telefon:\n+998 50 003 26 55")
+        await message.answer(
+            "📞 HR telefon:\n+998 50 003 26 55",
+            reply_markup=menu
+        )
         return
 
     if text == "📝 Ariza topshirish":
@@ -46,26 +59,108 @@ async def handler(message: Message):
         await message.answer("👤 Ism familiyangizni yozing:")
         return
 
-    if user_id in users:
-        step = users[user_id]["step"]
+    if user_id not in users:
+        await message.answer(
+            "Pastdagi tugmalardan foydalaning 👇",
+            reply_markup=menu
+        )
+        return
 
-        if step == "name":
-            users[user_id]["name"] = text
-            users[user_id]["step"] = "age"
-            await message.answer("🎂 Yoshingizni yozing:")
-            return
+    step = users[user_id]["step"]
 
-        if step == "age":
-            users[user_id]["age"] = text
-            await message.answer(
-                f"✅ Ma’lumot qabul qilindi:\n\n"
-                f"👤 Ism: {users[user_id]['name']}\n"
-                f"🎂 Yosh: {users[user_id]['age']}"
+    if step == "name":
+        users[user_id]["name"] = text
+        users[user_id]["step"] = "age"
+        await message.answer("🎂 Yoshingizni yozing:")
+        return
+
+    if step == "age":
+        users[user_id]["age"] = text
+        users[user_id]["step"] = "phone"
+        await message.answer(
+            "📱 Telefon raqamingizni yuboring:",
+            reply_markup=phone_menu
+        )
+        return
+
+    if step == "phone":
+        if message.contact:
+            users[user_id]["phone"] = message.contact.phone_number
+        else:
+            users[user_id]["phone"] = text
+
+        users[user_id]["step"] = "position"
+        await message.answer("💼 Qaysi lavozimga topshiryapsiz?")
+        return
+
+    if step == "position":
+        users[user_id]["position"] = text
+        users[user_id]["step"] = "experience"
+        await message.answer("📌 Ish tajribangizni yozing:")
+        return
+
+    if step == "experience":
+        users[user_id]["experience"] = text
+        users[user_id]["step"] = "resume"
+        await message.answer(
+            "📎 Resume/CV yuboring.\n"
+            "PDF, DOCX yoki rasm yuborishingiz mumkin.\n\n"
+            "Agar resume yo‘q bo‘lsa: Yo‘q deb yozing."
+        )
+        return
+
+    if step == "resume":
+        try:
+            data = users[user_id]
+
+            hr_text = (
+                "🆕 YANGI ARIZA\n\n"
+                f"👤 Ism: {data['name']}\n"
+                f"🎂 Yosh: {data['age']}\n"
+                f"📞 Telefon: {data['phone']}\n"
+                f"💼 Lavozim: {data['position']}\n"
+                f"📌 Tajriba: {data['experience']}"
             )
+
+            await bot.send_message(
+                chat_id=HR_GROUP_ID,
+                text=hr_text
+            )
+
+            if message.document:
+                await bot.send_document(
+                    chat_id=HR_GROUP_ID,
+                    document=message.document.file_id,
+                    caption="📎 Resume/CV fayli"
+                )
+
+            elif message.photo:
+                await bot.send_photo(
+                    chat_id=HR_GROUP_ID,
+                    photo=message.photo[-1].file_id,
+                    caption="📎 Resume/CV rasmi"
+                )
+
+            else:
+                await bot.send_message(
+                    chat_id=HR_GROUP_ID,
+                    text=f"📎 Resume/CV: {text}"
+                )
+
+            await message.answer(
+                "✅ Arizangiz HR guruhga yuborildi!",
+                reply_markup=menu
+            )
+
             del users[user_id]
             return
 
-    await message.answer("Pastdagi tugmalardan foydalaning 👇", reply_markup=menu)
+        except Exception as error:
+            await message.answer(
+                f"❌ Xatolik bo‘ldi:\n{error}",
+                reply_markup=menu
+            )
+            return
 
 
 async def main():
